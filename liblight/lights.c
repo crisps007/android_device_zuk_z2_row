@@ -44,11 +44,23 @@ static struct light_state_t g_battery;
 char const*const RED_LED_FILE
         = "/sys/class/leds/led:rgb_red/brightness";
 
+char const*const GREEN_LED_FILE
+        = "/sys/class/leds/led:rgb_green/brightness";
+
+char const*const BLUE_LED_FILE
+        = "/sys/class/leds/led:rgb_blue/brightness";
+
 char const*const LCD_FILE
         = "/sys/class/leds/lcd-backlight/brightness";
 
-char const*const RED_BLINK_FILE
+char const*const RED_BREATH_FILE
         = "/sys/class/leds/led:rgb_red/rgbbreath";
+
+char const*const GREEN_BREATH_FILE
+        = "/sys/class/leds/led:rgb_green/rgbbreath";
+
+char const*const BLUE_BREATH_FILE
+        = "/sys/class/leds/led:rgb_blue/rgbbreath";
 
 #define RAMP_SIZE 8
 static int BRIGHTNESS_RAMP[RAMP_SIZE]
@@ -142,8 +154,7 @@ static int
 set_speaker_light_locked(struct light_device_t* dev,
         struct light_state_t const* state)
 {
-    int red;
-    int blink;
+    int red, green, blue, redled, greenled, blueled, blink;
     int onMS, offMS, stepDuration, pauseHi;
     unsigned int colorRGB;
     char *duty;
@@ -170,27 +181,38 @@ set_speaker_light_locked(struct light_device_t* dev,
             state->flashMode, colorRGB, onMS, offMS);
 
     red = (colorRGB >> 16) & 0xFF;
+    green = (colorRGB >> 8) & 0xFF;
+    blue = colorRGB & 0xFF;
+
+    if (red > 127) {
+        redled = 1;
+    } else {
+        redled = 0;
+    } 
+
+    if (green > 127) {
+        greenled = 1;
+    } else {
+        greenled = 0;
+    } 
+
+    if (blue > 127) {
+        blueled = 1;
+    } else {
+        blueled = 0;
+    } 
 
     blink = onMS > 0 && offMS > 0;
 
-    // disable all blinking to start
-    write_int(RED_BLINK_FILE, 0);
+    // disable all BREATHing to start
+    write_int(RED_BREATH_FILE, 0);
+    write_int(GREEN_BREATH_FILE, 0);
+    write_int(BLUE_BREATH_FILE, 0);
 
-    if (blink) {
-        stepDuration = RAMP_STEP_DURATION;
-        pauseHi = onMS - (stepDuration * RAMP_SIZE * 2);
-        if (stepDuration * RAMP_SIZE * 2 > onMS) {
-            stepDuration = onMS / (RAMP_SIZE * 2);
-            pauseHi = 0;
-        }
-
-        // start the party
-        write_int(RED_BLINK_FILE, red);
-
-    } else {
-        write_int(RED_LED_FILE, red);
-    }
-
+    // start the party
+    write_int(RED_BREATH_FILE, redled);
+    write_int(GREEN_BREATH_FILE, greenled);
+    write_int(BLUE_BREATH_FILE, blueled);
 
     return 0;
 }
